@@ -1,0 +1,33 @@
+{
+  "name": "radar-app-electron",
+  "version": "1.0.0",
+  "description": "Advanced Weather Radar Application",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder",
+    "dev": "electron ."
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "packageManager": "pnpm@10.6.0",
+  "dependencies": {
+    "@turf/turf": "^7.2.0",
+    "axios": "^1.8.2",
+    "d3": "^7.8.5",
+    "electron": "^35.0.0",
+    "electron-builder": "^25.1.8",
+    "leaflet": "^1.9.4",
+    "moment": "^2.30.1",
+    "nexrad-level-2-data": "^2.4.2",
+    "socket.io-client": "^4.7.4",
+    "three.js": "^0.77.1",
+    "ws": "^8.16.0"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "electron"
+    ]
+  }
+}
