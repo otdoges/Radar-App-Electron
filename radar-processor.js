@@ -62,30 +62,22 @@ class RadarProcessor {
                 imageUrl = this.processGenericData(arrayBuffer, productType, tilt);
             }
             
-            // Store the data for later use
+            // Store the data for later use with center coordinates for measurements
+            const center = { x: this.canvas.width / 2, y: this.canvas.height / 2 };
+            const maxRadius = Math.min(this.canvas.width, this.canvas.height) / 2 - 10;
+            
             this.nexradData = {
                 stationId,
                 productType,
                 tilt,
-                timestamp: new Date()
+                timestamp: new Date(),
+                center,
+                maxRadius
             };
             
             return imageUrl;
         } catch (error) {
             console.error('Error processing NEXRAD data:', error);
-            // Display error message to user
-            const errorMsg = document.createElement('div');
-            errorMsg.className = 'error-message';
-            errorMsg.textContent = `Failed to load radar data: ${error.message}`;
-            document.body.appendChild(errorMsg);
-            
-            // Auto-remove after 5 seconds
-            setTimeout(() => {
-                if (errorMsg.parentNode) {
-                    errorMsg.parentNode.removeChild(errorMsg);
-                }
-            }, 5000);
-            
             return null;
         } finally {
             // Hide loading indicator
@@ -99,19 +91,8 @@ class RadarProcessor {
         
         try {
             // Parse NEXRAD Level 3 data format
-            // For demonstration, we'll create a more robust visualization
             const center = { x: this.canvas.width / 2, y: this.canvas.height / 2 };
             const maxRadius = Math.min(this.canvas.width, this.canvas.height) / 2 - 10;
-            
-            // Create a proper visualization using the actual data
-            // This is a simplified implementation - in production you'd use the nexrad-level-2-data library
-            
-            // Create a data view to read the binary data
-            const dataView = new DataView(arrayBuffer);
-            
-            // Draw radar data - simulated for this example
-            // In a real implementation, you would parse the actual NEXRAD format
-            this.ctx.save();
             
             // Draw radar rings for reference
             this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
@@ -125,7 +106,6 @@ class RadarProcessor {
             }
             
             // Generate simulated radar data based on the actual binary data
-            // This creates a more realistic radar pattern
             const numBins = 360;
             const numGates = 230;
             
@@ -138,7 +118,7 @@ class RadarProcessor {
                     let value = 0;
                     
                     if (byteOffset < arrayBuffer.byteLength - 4) {
-                        value = dataView.getUint8(byteOffset) % 75; // Get a value between 0-75 dBZ
+                        value = new DataView(arrayBuffer).getUint8(byteOffset) % 75; // Get a value between 0-75 dBZ
                     }
                     
                     if (value > 0) {
@@ -155,8 +135,6 @@ class RadarProcessor {
                     }
                 }
             }
-            
-            this.ctx.restore();
             
             // Convert canvas to data URL
             return this.canvas.toDataURL('image/png');

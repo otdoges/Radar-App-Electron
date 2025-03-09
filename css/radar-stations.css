@@ -1,0 +1,53 @@
+/* Radar station markers */
+.radar-station-marker {
+    width: 10px;
+    height: 10px;
+}
+
+.station-icon {
+    width: 100%;
+    height: 100%;
+    background-color: #2196F3;
+    border-radius: 50%;
+    border: 2px solid white;
+    box-shadow: 0 0 5px rgba(0, 0, 0, 0.5);
+}
+
+.active-station .station-icon {
+    background-color: #FF5722;
+    transform: scale(1.2);
+}
+
+/* Station popup */
+.station-popup h3 {
+    margin: 0 0 5px 0;
+    font-size: 14px;
+}
+
+.station-popup button {
+    width: 100%;
+    margin-top: 5px;
+}
+
+/* Make sure popups are visible */
+.leaflet-popup-content-wrapper {
+    background-color: rgba(33, 33, 33, 0.9);
+    color: white;
+}
+
+.leaflet-popup-tip {
+    background-color: rgba(33, 33, 33, 0.9);
+}
+
+/* Measurement overlay */
+.measurement-overlay {
+    position: absolute;
+    bottom: 10px;
+    left: 260px;
+    background-color: rgba(0, 0, 0, 0.7);
+    color: white;
+    padding: 5px 10px;
+    border-radius: 3px;
+    z-index: 1000;
+    font-size: 12px;
+}

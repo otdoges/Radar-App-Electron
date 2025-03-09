@@ -1,0 +1,70 @@
+/* Sidebar styles */
+.sidebar {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 300px;
+    height: 100%;
+    background: rgba(33, 33, 33, 0.95);
+    color: white;
+    z-index: 1000;
+    transition: transform 0.3s ease;
+    box-shadow: 2px 0 10px rgba(0, 0, 0, 0.3);
+}
+
+.sidebar.collapsed {
+    transform: translateX(-270px);
+}
+
+.sidebar-header {
+    padding: 10px;
+    background-color: rgba(0, 0, 0, 0.3);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.sidebar-header h2 {
+    margin: 0;
+    font-size: 18px;
+}
+
+/* Control sections */
+.control-section {
+    margin-bottom: 5px;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 5px;
+    overflow: hidden;
+}
+
+.control-section h3 {
+    margin: 0;
+    padding: 12px 15px;
+    font-size: 14px;
+    background: rgba(0, 0, 0, 0.3);
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+}
+
+.control-section h3 i {
+    margin-right: 10px;
+}
+
+.section-toggle {
+    background: none;
+    border: none;
+    color: white;
+    margin-left: auto;
+    cursor: pointer;
+    padding: 0;
+}
+
+.section-content {
+    padding: 15px;
+    display: none;
+}
+
+.section-content.active {
+    display: block;
+}
