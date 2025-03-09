@@ -217,187 +217,167 @@ class RadarController {
         });
     }
 
-    // Add this to the initializeControls method
     initializeControls() {
-    console.log('Initializing radar controls');
-    
-    // Initialize product buttons
-    const productButtons = document.querySelectorAll('.product-btn');
-    productButtons.forEach(btn => {
-        btn.addEventListener('click', () => {
-            const productCode = btn.getAttribute('data-product');
-            if (productCode) {
-                // Remove active class from all buttons
-                productButtons.forEach(b => b.classList.remove('active'));
-                // Add active class to clicked button
-                btn.classList.add('active');
-                
-                if (this.currentStation) {
-                    this.loadRadarData(this.currentStation, productCode, this.currentTilt || 1);
+        console.log('Initializing radar controls');
+        
+        // Initialize product buttons
+        const productButtons = document.querySelectorAll('.product-btn');
+        productButtons.forEach(btn => {
+            btn.addEventListener('click', () => {
+                const productCode = btn.getAttribute('data-product');
+                if (productCode) {
+                    // Remove active class from all buttons
+                    productButtons.forEach(b => b.classList.remove('active'));
+                    // Add active class to clicked button
+                    btn.classList.add('active');
+                    
+                    if (this.currentStation) {
+                        this.loadRadarData(this.currentStation, productCode, this.currentTilt || 1);
+                    }
                 }
-            }
-        });
-    });
-    
-    // Initialize tilt buttons
-    const tiltButtons = document.querySelectorAll('.tilt-btn');
-    tiltButtons.forEach(btn => {
-        btn.addEventListener('click', () => {
-            const tilt = parseInt(btn.getAttribute('data-tilt'), 10);
-            if (tilt) {
-                // Remove active class from all buttons
-                tiltButtons.forEach(b => b.classList.remove('active'));
-                // Add active class to clicked button
-                btn.classList.add('active');
-                
-                this.currentTilt = tilt;
-                if (this.currentStation) {
-                    const productCode = document.querySelector('.product-btn.active')?.getAttribute('data-product') || 'N0Q';
-                    this.loadRadarData(this.currentStation, productCode, tilt);
-                }
-            }
-        });
-    });
-    
-    // Initialize radar site selector
-    const radarSiteSelect = document.getElementById('radar-site');
-    if (radarSiteSelect) {
-        radarSiteSelect.addEventListener('change', () => {
-            const stationId = radarSiteSelect.value;
-            if (stationId) {
-                this.selectStation(stationId);
-            }
-        });
-    }
-    
-    // Initialize settings panel toggle
-    const settingsToggle = document.getElementById('settings-toggle');
-    const settingsPanel = document.getElementById('settings-panel');
-    const closeSettings = document.querySelector('.close-settings');
-    
-    if (settingsToggle && settingsPanel) {
-        settingsToggle.addEventListener('click', () => {
-            settingsPanel.classList.toggle('active');
+            });
         });
         
-        if (closeSettings) {
-            closeSettings.addEventListener('click', () => {
-                settingsPanel.classList.remove('active');
+        // Initialize tilt buttons
+        const tiltButtons = document.querySelectorAll('.tilt-btn');
+        tiltButtons.forEach(btn => {
+            btn.addEventListener('click', () => {
+                const tilt = parseInt(btn.getAttribute('data-tilt'), 10);
+                if (tilt) {
+                    // Remove active class from all buttons
+                    tiltButtons.forEach(b => b.classList.remove('active'));
+                    // Add active class to clicked button
+                    btn.classList.add('active');
+                    
+                    this.currentTilt = tilt;
+                    if (this.currentStation) {
+                        const productCode = document.querySelector('.product-btn.active')?.getAttribute('data-product') || 'N0Q';
+                        this.loadRadarData(this.currentStation, productCode, tilt);
+                    }
+                }
+            });
+        });
+        
+        // Initialize radar site selector
+        const radarSiteSelect = document.getElementById('radar-site');
+        if (radarSiteSelect) {
+            radarSiteSelect.addEventListener('change', () => {
+                const stationId = radarSiteSelect.value;
+                if (stationId) {
+                    this.selectStation(stationId);
+                }
             });
         }
-    }
-    
-    // Set default active product
-    const defaultProduct = document.querySelector('.product-btn[data-product="N0Q"]');
-    if (defaultProduct) {
-        defaultProduct.classList.add('active');
-    }
-    
-    // Set default active tilt
-    const defaultTilt = document.querySelector('.tilt-btn[data-tilt="1"]');
-    if (defaultTilt) {
-        defaultTilt.classList.add('active');
-    }
-}
-    
-    // Play/Pause buttons
-    document.querySelectorAll('.animation-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-            if (btn.id === 'play') {
-                this.play();
-            } else if (btn.id === 'pause') {
-                this.pause();
-            }
-        });
-    });
-    
-    // Settings panel toggle
-    const settingsToggle = document.getElementById('settings-toggle');
-    const settingsPanel = document.getElementById('settings-panel');
-    const closeSettings = document.querySelector('.close-settings');
-    
-    if (settingsToggle && settingsPanel) {
-        settingsToggle.addEventListener('click', () => {
-            settingsPanel.classList.toggle('active');
+        
+        // Play/Pause buttons
+        document.querySelectorAll('.animation-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                if (btn.id === 'play') {
+                    this.play();
+                } else if (btn.id === 'pause') {
+                    this.pause();
+                }
+            });
         });
         
-        if (closeSettings) {
-            closeSettings.addEventListener('click', () => {
-                settingsPanel.classList.remove('active');
+        // Settings panel toggle
+        const settingsToggle = document.getElementById('settings-toggle');
+        const settingsPanel = document.getElementById('settings-panel');
+        const closeSettings = document.querySelector('.close-settings');
+        
+        if (settingsToggle && settingsPanel) {
+            settingsToggle.addEventListener('click', () => {
+                settingsPanel.classList.toggle('active');
+            });
+            
+            if (closeSettings) {
+                closeSettings.addEventListener('click', () => {
+                    settingsPanel.classList.remove('active');
+                });
+            }
+        }
+        
+        // Radar opacity slider
+        const opacitySlider = document.getElementById('radar-opacity');
+        if (opacitySlider) {
+            // Set initial value from localStorage if available
+            const savedOpacity = localStorage.getItem('radarOpacity');
+            if (savedOpacity) {
+                opacitySlider.value = savedOpacity;
+            }
+            
+            opacitySlider.addEventListener('input', (e) => {
+                this.updateRadarOpacity(e.target.value);
             });
         }
-    }
-    
-    // Radar opacity slider
-    const opacitySlider = document.getElementById('radar-opacity');
-    if (opacitySlider) {
-        // Set initial value from localStorage if available
-        const savedOpacity = localStorage.getItem('radarOpacity');
-        if (savedOpacity) {
-            opacitySlider.value = savedOpacity;
+        
+        // Map style selector
+        const mapStyleSelector = document.getElementById('map-style');
+        if (mapStyleSelector) {
+            // Set initial value from localStorage if available
+            const savedStyle = localStorage.getItem('mapStyle');
+            if (savedStyle) {
+                mapStyleSelector.value = savedStyle;
+                this.updateMapStyle(savedStyle);
+            }
+            
+            mapStyleSelector.addEventListener('change', (e) => {
+                this.updateMapStyle(e.target.value);
+            });
         }
         
-        opacitySlider.addEventListener('input', (e) => {
-            this.updateRadarOpacity(e.target.value);
-        });
-    }
-    
-    // Map style selector
-    const mapStyleSelector = document.getElementById('map-style');
-    if (mapStyleSelector) {
-        // Set initial value from localStorage if available
-        const savedStyle = localStorage.getItem('mapStyle');
-        if (savedStyle) {
-            mapStyleSelector.value = savedStyle;
-            this.updateMapStyle(savedStyle);
+        // Set default active product
+        const defaultProduct = document.querySelector('.product-btn[data-product="N0Q"]');
+        if (defaultProduct) {
+            defaultProduct.classList.add('active');
         }
         
-        mapStyleSelector.addEventListener('change', (e) => {
-            this.updateMapStyle(e.target.value);
-        });
+        // Set default active tilt
+        const defaultTilt = document.querySelector('.tilt-btn[data-tilt="1"]');
+        if (defaultTilt) {
+            defaultTilt.classList.add('active');
+        }
     }
-}
 
-// Add this method to update map style
-updateMapStyle(style) {
-    // Remove current base layer
-    map.eachLayer(layer => {
-        if (layer._url && layer._url.includes('tile')) {
-            map.removeLayer(layer);
+    updateMapStyle(style) {
+        // Remove current base layer
+        map.eachLayer(layer => {
+            if (layer._url && layer._url.includes('tile')) {
+                map.removeLayer(layer);
+            }
+        });
+        
+        // Add new base layer based on style
+        let tileLayer;
+        switch (style) {
+            case 'satellite':
+                tileLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+                    attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community',
+                    maxZoom: 19
+                });
+                break;
+            case 'dark':
+                tileLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+                    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+                    subdomains: 'abcd',
+                    maxZoom: 19
+                });
+                break;
+            default: // default OSM style
+                tileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+                    maxZoom: 19
+                });
         }
-    });
-    
-    // Add new base layer based on style
-    let tileLayer;
-    switch (style) {
-        case 'satellite':
-            tileLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-                attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community',
-                maxZoom: 19
-            });
-            break;
-        case 'dark':
-            tileLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
-                subdomains: 'abcd',
-                maxZoom: 19
-            });
-            break;
-        default: // default OSM style
-            tileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-                maxZoom: 19
-            });
+        
+        // Add the new layer to the map
+        if (tileLayer) {
+            tileLayer.addTo(map);
+        }
+        
+        // Save preference
+        localStorage.setItem('mapStyle', style);
     }
-    
-    // Add the new layer to the map
-    if (tileLayer) {
-        tileLayer.addTo(map);
-    }
-    
-    // Save preference
-    localStorage.setItem('mapStyle', style);
-}
 
     async loadRadarData(stationId, productCode = 'N0Q', tilt = 1) {
         if (!stationId) return;
