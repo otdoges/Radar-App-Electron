@@ -1,93 +1,141 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Weather Radar App</title>
+    <title>NEXRAD Weather Radar</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
     <div id="app">
-continue        <div id="loading-indicator">Loading radar data...</div>
+        <div id="loading-indicator">Loading radar data...</div>
         <div id="alerts-panel"></div>
         <div id="map"></div>
-        <div id="product-selector">
-            <div class="product-category">
-                <h3>Super Resolution</h3>
-                <button class="product-btn" data-product="N0Q">Super-Res Base Reflectivity</button>
-                <button class="product-btn" data-product="N0U">Super-Res Base Velocity</button>
+
+        <!-- Collapsible Sidebar -->
+        <div id="sidebar" class="sidebar">
+            <div class="sidebar-header">
+                <h2>Radar Controls</h2>
+                <button id="sidebar-toggle" class="sidebar-toggle">
+                    <i class="fas fa-chevron-left"></i>
+                </button>
             </div>
-            <div class="product-category">
-                <h3>Digital</h3>
-                <button class="product-btn" data-product="N0C">Correlation Coefficient</button>
-                <button class="product-btn" data-product="N0K">Differential Reflectivity</button>
-                <button class="product-btn" data-product="N0H">Hydrometer Classification</button>
-                <button class="product-btn" data-product="N0X">Differential Phase</button>
-                <button class="product-btn" data-product="N0R">Digital Base Reflectivity</button>
-                <button class="product-btn" data-product="N0V">Digital Base Velocity</button>
-                <button class="product-btn" data-product="NTP">Vertically Integrated Liquid</button>
-            </div>
-            <div class="product-category">
-                <h3>Tilt Selection</h3>
-                <div class="tilt-buttons">
-                    <button class="tilt-btn" data-tilt="1">Tilt 1</button>
-                    <button class="tilt-btn" data-tilt="2">Tilt 2</button>
-                    <button class="tilt-btn" data-tilt="3">Tilt 3</button>
-                    <button class="tilt-btn" data-tilt="4">Tilt 4</button>
-                </div>
-            </div>
-            <div class="product-category">
-                <h3>Legend</h3>
-                <div class="legend-container">
-                    <div class="legend reflectivity-legend">
-                        <h4>Reflectivity (dBZ)</h4>
-                        <div class="legend-scale">
-                            <div class="legend-item" style="background-color: rgb(4, 233, 231)"><span>5-10</span></div>
-                            <div class="legend-item" style="background-color: rgb(1, 159, 244)"><span>10-15</span></div>
-                            <div class="legend-item" style="background-color: rgb(3, 0, 244)"><span>15-20</span></div>
-                            <div class="legend-item" style="background-color: rgb(2, 253, 2)"><span>20-25</span></div>
-                            <div class="legend-item" style="background-color: rgb(1, 197, 1)"><span>25-30</span></div>
-                            <div class="legend-item" style="background-color: rgb(0, 142, 0)"><span>30-35</span></div>
-                            <div class="legend-item" style="background-color: rgb(253, 248, 2)"><span>35-40</span></div>
-                            <div class="legend-item" style="background-color: rgb(229, 188, 0)"><span>40-45</span></div>
-                            <div class="legend-item" style="background-color: rgb(253, 149, 0)"><span>45-50</span></div>
-                            <div class="legend-item" style="background-color: rgb(253, 0, 0)"><span>50-55</span></div>
-                            <div class="legend-item" style="background-color: rgb(212, 0, 0)"><span>55-60</span></div>
-                            <div class="legend-item" style="background-color: rgb(188, 0, 0)"><span>60-65</span></div>
-                            <div class="legend-item" style="background-color: rgb(248, 0, 253)"><span>65-70</span></div>
-                            <div class="legend-item" style="background-color: rgb(152, 84, 198)"><span>70+</span></div>
+
+            <div class="sidebar-content">
+                <!-- Product Selection -->
+                <div class="control-section">
+                    <h3>
+                        <i class="fas fa-layer-group"></i>
+                        Products
+                        <button class="section-toggle">
+                            <i class="fas fa-chevron-down"></i>
+                        </button>
+                    </h3>
+                    <div class="section-content">
+                        <div class="product-category">
+                            <h4>Super Resolution</h4>
+                            <button class="product-btn" data-product="N0Q">Base Reflectivity</button>
+                            <button class="product-btn" data-product="N0U">Base Velocity</button>
+                        </div>
+                        <div class="product-category">
+                            <h4>Digital</h4>
+                            <button class="product-btn" data-product="N0C">Correlation Coefficient</button>
+                            <button class="product-btn" data-product="N0K">Differential Reflectivity</button>
+                            <button class="product-btn" data-product="N0H">Hydrometer Classification</button>
+                            <button class="product-btn" data-product="N0X">Differential Phase</button>
+                            <button class="product-btn" data-product="N0R">Digital Base Reflectivity</button>
+                            <button class="product-btn" data-product="N0V">Digital Base Velocity</button>
+                            <button class="product-btn" data-product="NTP">Vertically Integrated Liquid</button>
                         </div>
                     </div>
-                    <div class="legend velocity-legend">
-                        <h4>Velocity (m/s)</h4>
-                        <div class="legend-scale">
-                            <div class="legend-item" style="background-color: rgb(122, 114, 238)"><span>-30</span></div>
-                            <div class="legend-item" style="background-color: rgb(30, 41, 183)"><span>-20</span></div>
-                            <div class="legend-item" style="background-color: rgb(0, 0, 255)"><span>-10</span></div>
-                            <div class="legend-item" style="background-color: rgb(255, 255, 255)"><span>0</span></div>
-                            <div class="legend-item" style="background-color: rgb(255, 0, 0)"><span>10</span></div>
-                            <div class="legend-item" style="background-color: rgb(183, 41, 30)"><span>20</span></div>
-                            <div class="legend-item" style="background-color: rgb(238, 114, 122)"><span>30</span></div>
+                </div>
+
+                <!-- Tilt Selection -->
+                <div class="control-section">
+                    <h3>
+                        <i class="fas fa-angle-double-up"></i>
+                        Tilt Angle
+                        <button class="section-toggle">
+                            <i class="fas fa-chevron-down"></i>
+                        </button>
+                    </h3>
+                    <div class="section-content">
+                        <div class="tilt-buttons">
+                            <button class="tilt-btn active" data-tilt="1">0.5°</button>
+                            <button class="tilt-btn" data-tilt="2">1.5°</button>
+                            <button class="tilt-btn" data-tilt="3">2.4°</button>
+                            <button class="tilt-btn" data-tilt="4">3.4°</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Legend -->
+                <div class="control-section">
+                    <h3>
+                        <i class="fas fa-palette"></i>
+                        Legend
+                        <button class="section-toggle">
+                            <i class="fas fa-chevron-down"></i>
+                        </button>
+                    </h3>
+                    <div class="section-content">
+                        <div class="legend-container">
+                            <div class="reflectivity-legend"></div>
+                            <div class="velocity-legend"></div>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
-        <div id="controls">
-            <div id="timeline"></div>
-            <div id="radar-controls">
-                <button id="play">Play</button>
-                <button id="pause">Pause</button>
-                <select id="radar-site">
-                    <option value="">Select a radar station</option>
-                </select>
-                <div class="layer-controls">
-                    <label><input type="checkbox" id="show-alerts" checked> Alerts</label>
-                    <label><input type="checkbox" id="show-velocity"> Velocity</label>
-                    <label><input type="checkbox" id="show-temperature"> Temperature</label>
+
+        <!-- Settings Panel -->
+        <div id="settings-panel" class="settings-panel">
+            <div class="settings-header">
+                <h2>Settings</h2>
+                <button class="close-settings">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="settings-content">
+                <div class="settings-section">
+                    <h3>Display</h3>
+                    <div class="setting-item">
+                        <label>Map Style</label>
+                        <select id="map-style">
+                            <option value="default">Default</option>
+                            <option value="satellite">Satellite</option>
+                            <option value="dark">Dark</option>
+                        </select>
+                    </div>
+                    <div class="setting-item">
+                        <label>Radar Opacity</label>
+                        <input type="range" id="radar-opacity" min="0" max="100" value="70">
+                    </div>
+                </div>
+                <div class="settings-section">
+                    <h3>Animation</h3>
+                    <div class="setting-item">
+                        <label>Frame Rate</label>
+                        <select id="frame-rate">
+                            <option value="1000">1 fps</option>
+                            <option value="500">2 fps</option>
+                            <option value="333">3 fps</option>
+                        </select>
+                    </div>
+                    <div class="setting-item">
+                        <label>Loop Count</label>
+                        <input type="number" id="loop-count" min="1" max="10" value="3">
+                    </div>
                 </div>
             </div>
         </div>
+
+        <!-- Settings Toggle Button -->
+        <button id="settings-toggle" class="settings-toggle">
+            <i class="fas fa-cog"></i>
+        </button>
     </div>
+
     <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
     <script src="https://d3js.org/d3.v7.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/nexrad-level-2-data@2.4.2/dist/nexrad-level-2-data.min.js"></script>

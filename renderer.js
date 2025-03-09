@@ -366,3 +366,304 @@ const alertsHandler = new AlertsHandler();
 
 // Make it globally accessible
 window.radarController = radarController;
+
+// Add after the existing initialization code
+
+// Initialize sidebar and settings functionality
+function initializeUI() {
+    // Sidebar toggle functionality
+    const sidebarToggle = document.getElementById('sidebar-toggle');
+    const sidebar = document.getElementById('sidebar');
+    
+    if (sidebarToggle && sidebar) {
+        sidebarToggle.addEventListener('click', () => {
+            sidebar.classList.toggle('collapsed');
+            
+            // Update toggle icon
+            const icon = sidebarToggle.querySelector('i');
+            if (icon) {
+                if (sidebar.classList.contains('collapsed')) {
+                    icon.classList.remove('fa-chevron-left');
+                    icon.classList.add('fa-chevron-right');
+                } else {
+                    icon.classList.remove('fa-chevron-right');
+                    icon.classList.add('fa-chevron-left');
+                }
+            }
+        });
+    }
+    
+    // Section toggles for collapsible sections
+    const sectionToggles = document.querySelectorAll('.section-toggle');
+    sectionToggles.forEach(toggle => {
+        toggle.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const section = toggle.closest('.control-section');
+            const content = section.querySelector('.section-content');
+            
+            // Toggle section content visibility
+            if (content) {
+                content.classList.toggle('active');
+                
+                // Update toggle icon
+                const icon = toggle.querySelector('i');
+                if (icon) {
+                    icon.classList.toggle('fa-chevron-down');
+                    icon.classList.toggle('fa-chevron-up');
+                }
+            }
+        });
+        
+        // Set first section to be open by default
+        const section = toggle.closest('.control-section');
+        if (section && section === document.querySelector('.control-section')) {
+            const content = section.querySelector('.section-content');
+            if (content) {
+                content.classList.add('active');
+                const icon = toggle.querySelector('i');
+                if (icon) {
+                    icon.classList.remove('fa-chevron-down');
+                    icon.classList.add('fa-chevron-up');
+                }
+            }
+        }
+    });
+    
+    // Make section headers also toggle their content
+    const sectionHeaders = document.querySelectorAll('.control-section h3');
+    sectionHeaders.forEach(header => {
+        header.addEventListener('click', (e) => {
+            if (e.target === header || e.target.tagName !== 'BUTTON') {
+                const toggle = header.querySelector('.section-toggle');
+                if (toggle) {
+                    toggle.click();
+                }
+            }
+        });
+    });
+    
+    // Settings panel toggle
+    const settingsToggle = document.getElementById('settings-toggle');
+    const settingsPanel = document.getElementById('settings-panel');
+    const closeSettings = document.querySelector('.close-settings');
+    
+    if (settingsToggle && settingsPanel) {
+        settingsToggle.addEventListener('click', () => {
+            settingsPanel.classList.add('active');
+        });
+        
+        if (closeSettings) {
+            closeSettings.addEventListener('click', () => {
+                settingsPanel.classList.remove('active');
+            });
+        }
+        
+        // Close settings when clicking outside
+        window.addEventListener('click', (e) => {
+            if (settingsPanel.classList.contains('active') && 
+                !settingsPanel.contains(e.target) && 
+                e.target !== settingsToggle) {
+                settingsPanel.classList.remove('active');
+            }
+        });
+    }
+    
+    // Initialize settings controls
+    initializeSettingsControls();
+}
+
+// Initialize settings controls and their functionality
+function initializeSettingsControls() {
+    // Map style setting
+    const mapStyleSelect = document.getElementById('map-style');
+    if (mapStyleSelect) {
+        mapStyleSelect.addEventListener('change', (e) => {
+            const style = e.target.value;
+            updateMapStyle(style);
+        });
+    }
+    
+    // Radar opacity setting
+    const radarOpacitySlider = document.getElementById('radar-opacity');
+    if (radarOpacitySlider) {
+        radarOpacitySlider.addEventListener('input', (e) => {
+            const opacity = parseInt(e.target.value) / 100;
+            updateRadarOpacity(opacity);
+        });
+    }
+    
+    // Animation frame rate setting
+    const frameRateSelect = document.getElementById('frame-rate');
+    if (frameRateSelect) {
+        frameRateSelect.addEventListener('change', (e) => {
+            const frameRate = parseInt(e.target.value);
+            updateAnimationFrameRate(frameRate);
+        });
+    }
+    
+    // Loop count setting
+    const loopCountInput = document.getElementById('loop-count');
+    if (loopCountInput) {
+        loopCountInput.addEventListener('change', (e) => {
+            const loopCount = parseInt(e.target.value);
+            updateAnimationLoopCount(loopCount);
+        });
+    }
+}
+
+// Update map style based on selection
+function updateMapStyle(style) {
+    if (!map) return;
+    
+    // Remove current base layer
+    map.eachLayer(layer => {
+        if (layer._url && layer._url.includes('tile')) {
+            map.removeLayer(layer);
+        }
+    });
+    
+    // Add new base layer based on style
+    switch (style) {
+        case 'satellite':
+            L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+                attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
+            }).addTo(map);
+            break;
+        case 'dark':
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
+            }).addTo(map);
+            break;
+        default: // default OSM style
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+            }).addTo(map);
+    }
+    
+    // Save preference
+    localStorage.setItem('mapStyle', style);
+}
+
+// Update radar overlay opacity
+function updateRadarOpacity(opacity) {
+    if (this.radarOverlay) {
+        this.radarOverlay.setOpacity(opacity);
+    }
+    
+    // Save preference
+    localStorage.setItem('radarOpacity', opacity);
+}
+
+// Update animation frame rate
+function updateAnimationFrameRate(frameRate) {
+    this.animationFrameRate = frameRate;
+    
+    // If animation is currently playing, restart it with new frame rate
+    if (this.isPlaying) {
+        this.stopAnimation();
+        this.playAnimation();
+    }
+    
+    // Save preference
+    localStorage.setItem('animationFrameRate', frameRate);
+}
+
+// Update animation loop count
+function updateAnimationLoopCount(loopCount) {
+    this.animationLoopCount = loopCount;
+    
+    // Save preference
+    localStorage.setItem('animationLoopCount', loopCount);
+}
+
+// Load user preferences from localStorage
+function loadUserPreferences() {
+    // Map style
+    const savedMapStyle = localStorage.getItem('mapStyle');
+    if (savedMapStyle) {
+        const mapStyleSelect = document.getElementById('map-style');
+        if (mapStyleSelect) {
+            mapStyleSelect.value = savedMapStyle;
+            updateMapStyle(savedMapStyle);
+        }
+    }
+    
+    // Radar opacity
+    const savedOpacity = localStorage.getItem('radarOpacity');
+    if (savedOpacity !== null) {
+        const opacity = parseFloat(savedOpacity);
+        const radarOpacitySlider = document.getElementById('radar-opacity');
+        if (radarOpacitySlider) {
+            radarOpacitySlider.value = opacity * 100;
+        }
+    }
+    
+    // Animation frame rate
+    const savedFrameRate = localStorage.getItem('animationFrameRate');
+    if (savedFrameRate) {
+        const frameRate = parseInt(savedFrameRate);
+        const frameRateSelect = document.getElementById('frame-rate');
+        if (frameRateSelect) {
+            frameRateSelect.value = frameRate;
+        }
+        this.animationFrameRate = frameRate;
+    }
+    
+    // Animation loop count
+    const savedLoopCount = localStorage.getItem('animationLoopCount');
+    if (savedLoopCount) {
+        const loopCount = parseInt(savedLoopCount);
+        const loopCountInput = document.getElementById('loop-count');
+        if (loopCountInput) {
+            loopCountInput.value = loopCount;
+        }
+        this.animationLoopCount = loopCount;
+    }
+}
+
+// Initialize warnings panel
+function initializeWarningsPanel() {
+    const alertsPanel = document.getElementById('alerts-panel');
+    if (!alertsPanel) return;
+    
+    // Add header to alerts panel
+    const header = document.createElement('div');
+    header.className = 'alerts-header';
+    header.innerHTML = `
+        <h3>
+            <i class="fas fa-exclamation-triangle"></i>
+            Warnings
+            <button class="alerts-toggle">
+                <i class="fas fa-chevron-up"></i>
+            </button>
+        </h3>
+    `;
+    alertsPanel.prepend(header);
+    
+    // Add toggle functionality
+    const alertsToggle = header.querySelector('.alerts-toggle');
+    if (alertsToggle) {
+        alertsToggle.addEventListener('click', () => {
+            alertsPanel.classList.toggle('collapsed');
+            
+            // Update toggle icon
+            const icon = alertsToggle.querySelector('i');
+            if (icon) {
+                icon.classList.toggle('fa-chevron-up');
+                icon.classList.toggle('fa-chevron-down');
+            }
+        });
+    }
+}
+
+// Call these functions after the DOM is loaded
+document.addEventListener('DOMContentLoaded', () => {
+    initializeUI();
+    loadUserPreferences();
+    initializeWarningsPanel();
+    
+    // Initialize the radar controller after UI is ready
+    if (typeof RadarController !== 'undefined') {
+        window.radarController = new RadarController();
+    }
+});
