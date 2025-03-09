@@ -85,3 +85,106 @@
 .tilt-btn.active {
     background: #2196F3;
 }
+
+.color-legend {
+    position: fixed;
+    bottom: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: rgba(0, 0, 0, 0.7);
+    padding: 5px 10px;
+    border-radius: 5px;
+    z-index: 1000;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.legend-gradient {
+    height: 15px;
+    width: 600px;
+    margin-bottom: 5px;
+}
+
+.reflectivity-legend {
+    background: linear-gradient(to right, 
+        #20a0ff 0%, 
+        #00ff00 20%, 
+        #ffff00 40%, 
+        #ff9900 60%, 
+        #ff0000 80%, 
+        #ff00ff 100%);
+}
+
+.velocity-legend {
+    background: linear-gradient(to right, 
+        #ff0000 0%, 
+        #ff9900 20%, 
+        #ffff00 30%, 
+        #ffffff 50%, 
+        #00ff00 70%, 
+        #00ffff 80%, 
+        #0000ff 100%);
+}
+
+.correlation-legend {
+    background: linear-gradient(to right, 
+        #000000 0%, 
+        #800080 20%, 
+        #ff00ff 40%, 
+        #ff0000 60%, 
+        #ffff00 80%, 
+        #ffffff 100%);
+}
+
+.differential-reflectivity-legend {
+    background: linear-gradient(to right, 
+        #0000ff 0%, 
+        #00ffff 20%, 
+        #00ff00 40%, 
+        #ffff00 60%, 
+        #ff9900 80%, 
+        #ff0000 100%);
+}
+
+.hydrometeor-legend {
+    background: linear-gradient(to right, 
+        #00ffff 0%, 
+        #0000ff 14%, 
+        #ff00ff 28%, 
+        #ff0000 42%, 
+        #ff9900 56%, 
+        #ffff00 70%, 
+        #00ff00 84%, 
+        #00ffff 100%);
+}
+
+.differential-phase-legend {
+    background: linear-gradient(to right, 
+        #000000 0%, 
+        #800080 20%, 
+        #0000ff 40%, 
+        #00ffff 60%, 
+        #00ff00 80%, 
+        #ffff00 100%);
+}
+
+.vil-legend {
+    background: linear-gradient(to right, 
+        #00ff00 0%, 
+        #ffff00 25%, 
+        #ff9900 50%, 
+        #ff0000 75%, 
+        #ff00ff 100%);
+}
+
+.legend-labels {
+    display: flex;
+    justify-content: space-between;
+    width: 100%;
+}
+
+.legend-labels span {
+    color: white;
+    font-size: 10px;
+}

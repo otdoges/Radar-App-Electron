@@ -5,6 +5,16 @@ const map = L.map('map', {
     attributionControl: true
 });
 
+// Use dark map style by default
+L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+    subdomains: 'abcd',
+    maxZoom: 19
+}).addTo(map);
+
+// Save the default style preference
+localStorage.setItem('mapStyle', 'dark');
+
 // Ensure base tile layer is properly loaded
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     attribution: '© OpenStreetMap contributors',
@@ -164,24 +174,281 @@ class RadarController {
             const marker = L.marker([coords[1], coords[0]], {
                 icon: L.divIcon({
                     className: 'radar-station-marker',
-                    html: `<div class="station-icon"></div>`,
-                    iconSize: [12, 12]
+                    html: `<div class="station-icon"></div><div class="station-label">${station.properties.id}</div>`,
+                    iconSize: [40, 20]
                 })
             });
-
+    
             marker.bindPopup(`
                 <div class="station-popup">
                     <h3>${station.properties.name}</h3>
                     <p>ID: ${station.properties.id}</p>
-                    <button onclick="radarController.selectStation('${station.properties.id}')">
+                    <button class="select-station-btn" onclick="radarController.selectStation('${station.properties.id}')">
                         Select Station
                     </button>
                 </div>
             `);
-
+    
             marker.addTo(map);
             this.markers.set(station.properties.id, marker);
         });
+    }
+
+    // Initialize THREDDS connector for additional data layers
+    initializeThreddsConnector() {
+        this.threddsConnector = new ThreddsConnector();
+        this.additionalLayers = new Map();
+        
+        // Set up event listeners for layer buttons
+        document.querySelectorAll('.layer-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const layerId = btn.getAttribute('data-layer');
+                this.toggleLayer(layerId, btn);
+            });
+        });
+        
+        // Set up archive loader
+        const loadArchiveBtn = document.getElementById('load-archive');
+        if (loadArchiveBtn) {
+            loadArchiveBtn.addEventListener('click', () => {
+                const dateInput = document.getElementById('archive-date');
+                const selectedDate = dateInput.value ? new Date(dateInput.value) : new Date();
+                this.loadRadarArchive(this.currentStation, selectedDate);
+            });
+        }
+    }
+
+    // Toggle additional data layers from THREDDS
+    async toggleLayer(layerId, button) {
+        // Toggle button active state
+        const isActive = button.classList.contains('active');
+        
+        if (isActive) {
+            // Remove layer
+            if (this.additionalLayers.has(layerId)) {
+                map.removeLayer(this.additionalLayers.get(layerId));
+                this.additionalLayers.delete(layerId);
+            }
+            button.classList.remove('active');
+        } else {
+            // Add layer
+            button.classList.add('active');
+            
+            try {
+                let layer;
+                
+                switch (layerId) {
+                    case 'gfs-temperature':
+                        const gfsData = await this.threddsConnector.getModelData('GFS');
+                        if (gfsData) {
+                            layer = this.threddsConnector.addWmsLayer(
+                                map, 
+                                gfsData.wmsUrl, 
+                                'Temperature_surface', 
+                                { opacity: 0.6, styles: 'temperature' }
+                            );
+                        }
+                        break;
+                        
+                    case 'gfs-precipitation':
+                        const gfsPrecip = await this.threddsConnector.getModelData('GFS');
+                        if (gfsPrecip) {
+                            layer = this.threddsConnector.addWmsLayer(
+                                map, 
+                                gfsPrecip.wmsUrl, 
+                                'Total_precipitation_surface', 
+                                { opacity: 0.7, styles: 'precip' }
+                            );
+                        }
+                        break;
+                        
+                    case 'hrrr-reflectivity':
+                        const hrrrData = await this.threddsConnector.getModelData('HRRR');
+                        if (hrrrData) {
+                            layer = this.threddsConnector.addWmsLayer(
+                                map, 
+                                hrrrData.wmsUrl, 
+                                'Reflectivity_1000m_above_ground', 
+                                { opacity: 0.7 }
+                            );
+                        }
+                        break;
+                        
+                    case 'goes16-visible':
+                        const visibleData = await this.threddsConnector.getSatelliteImagery('GOES16', 'ABI');
+                        if (visibleData.length > 0) {
+                            const visibleLayer = visibleData.find(d => d.name.includes('Channel02'));
+                            if (visibleLayer) {
+                                layer = this.threddsConnector.addWmsLayer(
+                                    map, 
+                                    visibleLayer.wmsUrl, 
+                                    'Sectorized_CMI', 
+                                    { opacity: 0.8 }
+                                );
+                            }
+                        }
+                        break;
+                        
+                    case 'goes16-infrared':
+                        const irData = await this.threddsConnector.getSatelliteImagery('GOES16', 'ABI');
+                        if (irData.length > 0) {
+                            const irLayer = irData.find(d => d.name.includes('Channel13'));
+                            if (irLayer) {
+                                layer = this.threddsConnector.addWmsLayer(
+                                    map, 
+                                    irLayer.wmsUrl, 
+                                    'Sectorized_CMI', 
+                                    { opacity: 0.7, styles: 'ir_rgbcolor' }
+                                );
+                            }
+                        }
+                        break;
+                }
+                
+                if (layer) {
+                    this.additionalLayers.set(layerId, layer);
+                } else {
+                    console.error(`Failed to load layer: ${layerId}`);
+                    button.classList.remove('active');
+                }
+            } catch (error) {
+                console.error(`Error loading layer ${layerId}:`, error);
+                button.classList.remove('active');
+                alert(`Error loading ${layerId}: ${error.message}`);
+            }
+        }
+    }
+
+    // Load historical radar data from THREDDS archive
+    async loadRadarArchive(stationId, date) {
+        if (!stationId || !this.threddsConnector) return;
+        
+        try {
+            document.getElementById('loading-indicator').style.display = 'block';
+            
+            const archives = await this.threddsConnector.getNexradArchives(stationId, date);
+            
+            if (archives.length === 0) {
+                alert(`No radar archives found for ${stationId} on ${date.toLocaleDateString()}`);
+                return;
+            }
+            
+            // Sort archives by timestamp
+            archives.sort((a, b) => a.timestamp - b.timestamp);
+            
+            // Create a modal to display available archives
+            const modal = document.createElement('div');
+            modal.className = 'modal';
+            modal.innerHTML = `
+                <div class="modal-content">
+                    <span class="close-modal">&times;</span>
+                    <h2>Available Radar Archives for ${stationId}</h2>
+                    <div class="archive-list">
+                        ${archives.map((archive, index) => `
+                            <div class="archive-item" data-index="${index}">
+                                <span class="archive-time">${archive.timestamp.toLocaleTimeString()}</span>
+                                <span class="archive-name">${archive.name}</span>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+            
+            document.body.appendChild(modal);
+            
+            // Add event listeners
+            const closeBtn = modal.querySelector('.close-modal');
+            closeBtn.addEventListener('click', () => {
+                document.body.removeChild(modal);
+            });
+            
+            const archiveItems = modal.querySelectorAll('.archive-item');
+            archiveItems.forEach(item => {
+                item.addEventListener('click', () => {
+                    const index = parseInt(item.getAttribute('data-index'), 10);
+                    const archive = archives[index];
+                    
+                    // Display the selected archive
+                    this.displayRadarArchive(archive);
+                    
+                    // Close the modal
+                    document.body.removeChild(modal);
+                });
+            });
+            
+        } catch (error) {
+            console.error('Error loading radar archives:', error);
+            alert(`Error loading radar archives: ${error.message}`);
+        } finally {
+            document.getElementById('loading-indicator').style.display = 'none';
+        }
+    }
+
+    // Display a selected radar archive
+    async displayRadarArchive(archive) {
+        try {
+            document.getElementById('loading-indicator').style.display = 'block';
+            
+            // Clear any existing radar overlay
+            if (this.radarOverlay) {
+                map.removeLayer(this.radarOverlay);
+                this.radarOverlay = null;
+            }
+            
+            // Get the WMS URL for the archive
+            const wmsUrl = archive.accessUrl.replace('dodsC', 'wms');
+            
+            // Get the station coordinates
+            const station = this.nexradStations.find(s => s.properties.id === this.currentStation);
+            if (!station) {
+                console.error('Station not found:', this.currentStation);
+                return;
+            }
+            
+            const coords = station.geometry.coordinates;
+            
+            // Add the WMS layer to the map
+            const layer = this.threddsConnector.addWmsLayer(
+                map,
+                wmsUrl,
+                'Reflectivity',
+                { 
+                    opacity: 0.8,
+                    styles: 'radar',
+                    colorscalerange: '0,80',
+                    time: archive.timestamp.toISOString()
+                }
+            );
+            
+            if (layer) {
+                // Store the layer
+                this.radarOverlay = layer;
+                
+                // Zoom to the radar station
+                map.setView([coords[1], coords[0]], 8);
+                
+                // Update status
+                console.log(`Displaying radar archive: ${archive.name}`);
+                
+                // Show timestamp
+                const timestamp = document.createElement('div');
+                timestamp.className = 'archive-timestamp';
+                timestamp.textContent = `Archive: ${archive.timestamp.toLocaleString()}`;
+                document.getElementById('map').appendChild(timestamp);
+                
+                // Remove timestamp after 5 seconds
+                setTimeout(() => {
+                    if (timestamp.parentNode) {
+                        timestamp.parentNode.removeChild(timestamp);
+                    }
+                }, 5000);
+            }
+        } catch (error) {
+            console.error('Error displaying radar archive:', error);
+            alert(`Error displaying radar archive: ${error.message}`);
+        } finally {
+            document.getElementById('loading-indicator').style.display = 'none';
+        }
     }
 
     selectStation(stationId) {
@@ -429,7 +696,7 @@ class RadarController {
                 
                 // Add the radar image to the map
                 this.radarOverlay = L.imageOverlay(imageUrl, bounds, {
-                    opacity: 0.7,
+                    opacity: 0.8,
                     interactive: true
                 }).addTo(map);
                 
@@ -437,7 +704,14 @@ class RadarController {
                 const savedOpacity = localStorage.getItem('radarOpacity');
                 if (savedOpacity) {
                     this.radarOverlay.setOpacity(savedOpacity / 100);
+                } else {
+                    // Default to 80% opacity if not set
+                    this.radarOverlay.setOpacity(0.8);
+                    localStorage.setItem('radarOpacity', '80');
                 }
+                
+                // Update the product legend based on the current product
+                this.updateProductLegend(productCode);
                 
                 // Zoom to the radar station
                 map.setView([coords[1], coords[0]], 8);
@@ -471,6 +745,44 @@ class RadarController {
         } finally {
             // Hide loading indicator
             document.getElementById('loading-indicator').style.display = 'none';
+        }
+    }
+
+    // Add a new method to update the product legend based on the current product
+    updateProductLegend(productCode) {
+        const legendElement = document.querySelector('.legend-gradient');
+        if (!legendElement) return;
+        
+        // Remove all existing classes
+        legendElement.className = 'legend-gradient';
+        
+        // Add the appropriate class based on the product
+        switch(productCode) {
+            case 'N0Q':
+            case 'N0R':
+                legendElement.classList.add('reflectivity-legend');
+                break;
+            case 'N0U':
+            case 'N0V':
+                legendElement.classList.add('velocity-legend');
+                break;
+            case 'N0C':
+                legendElement.classList.add('correlation-legend');
+                break;
+            case 'N0K':
+                legendElement.classList.add('differential-reflectivity-legend');
+                break;
+            case 'N0H':
+                legendElement.classList.add('hydrometeor-legend');
+                break;
+            case 'N0X':
+                legendElement.classList.add('differential-phase-legend');
+                break;
+            case 'NTP':
+                legendElement.classList.add('vil-legend');
+                break;
+            default:
+                legendElement.classList.add('reflectivity-legend');
         }
     }
 

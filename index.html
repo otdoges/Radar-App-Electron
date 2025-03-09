@@ -147,5 +147,59 @@
     <script src="alerts-handler.js"></script>
     <script src="product-selector.js"></script>
     <script src="renderer.js"></script>
+
+    <!-- Add this before the closing body tag -->
+    <div class="color-legend">
+        <div class="legend-gradient reflectivity-legend"></div>
+        <div class="legend-labels">
+            <span>5</span>
+            <span>10</span>
+            <span>15</span>
+            <span>20</span>
+            <span>25</span>
+            <span>30</span>
+            <span>35</span>
+            <span>40</span>
+            <span>45</span>
+            <span>50</span>
+            <span>55</span>
+            <span>60</span>
+            <span>65</span>
+            <span>70</span>
+            <span>75</span>
+        </div>
+    </div>
+
+    <!-- Add this inside the sidebar-content div, after the existing control sections -->
+    <div class="control-section">
+        <h3>
+            <i class="fas fa-globe"></i>
+            Additional Layers
+            <button class="section-toggle">
+                <i class="fas fa-chevron-down"></i>
+            </button>
+        </h3>
+        <div class="section-content">
+            <div class="layer-category">
+                <h4>Model Data</h4>
+                <button class="layer-btn" data-layer="gfs-temperature">GFS Temperature</button>
+                <button class="layer-btn" data-layer="gfs-precipitation">GFS Precipitation</button>
+                <button class="layer-btn" data-layer="hrrr-reflectivity">HRRR Reflectivity</button>
+            </div>
+            <div class="layer-category">
+                <h4>Satellite</h4>
+                <button class="layer-btn" data-layer="goes16-visible">GOES-16 Visible</button>
+                <button class="layer-btn" data-layer="goes16-infrared">GOES-16 Infrared</button>
+            </div>
+            <div class="layer-category">
+                <h4>Historical Radar</h4>
+                <div class="date-selector">
+                    <label for="archive-date">Date:</label>
+                    <input type="date" id="archive-date">
+                    <button id="load-archive">Load</button>
+                </div>
+            </div>
+        </div>
+    </div>
 </body>
 </html>

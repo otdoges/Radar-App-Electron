@@ -15,44 +15,30 @@ class RadarProcessor {
             // Show loading indicator
             document.getElementById('loading-indicator').style.display = 'block';
             
-            // Instead of using the failing module, we'll use direct API calls
-            const url = `https://api.weather.gov/radar/stations/${stationId}/observations/latest`;
-            console.log(`Fetching radar data from: ${url}`);
+            // Use the NOAA Weather Service API for radar data
+            // This endpoint provides the latest radar image for the specified station and product
+            const baseUrl = 'https://radar.weather.gov/ridge/RadarImg';
+            let productPath = '';
             
-            const response = await fetch(url, {
-                headers: {
-                    'Accept': 'application/json',
-                    'User-Agent': 'RadarApp/1.0'
-                }
-            });
-            
-            if (!response.ok) {
-                throw new Error(`Failed to fetch radar data: ${response.status} ${response.statusText}`);
+            // Map product codes to their respective directories
+            switch(productType) {
+                case 'N0Q': productPath = 'N0Q'; break;
+                case 'N0U': productPath = 'N0U'; break;
+                case 'N0S': productPath = 'N0S'; break;
+                case 'N0C': productPath = 'N0C'; break;
+                case 'N0K': productPath = 'N0K'; break;
+                case 'N0H': productPath = 'N0H'; break;
+                case 'N0X': productPath = 'N0X'; break;
+                case 'N0R': productPath = 'N0R'; break;
+                case 'N0V': productPath = 'N0V'; break;
+                case 'NTP': productPath = 'NTP'; break;
+                default: productPath = 'N0Q';
             }
             
-            const data = await response.json();
-            
-            // Get the URL for the requested product
-            let imageUrl = null;
-            if (data && data.features && data.features.length > 0) {
-                const feature = data.features[0];
-                if (feature.properties && feature.properties.image) {
-                    // Try to find the requested product
-                    if (productType === 'N0Q' && feature.properties.image) {
-                        imageUrl = feature.properties.image;
-                    } else if (productType === 'N0U' && feature.properties.velocity) {
-                        imageUrl = feature.properties.velocity;
-                    } else {
-                        // Default to reflectivity if requested product not found
-                        imageUrl = feature.properties.image;
-                    }
-                }
-            }
-            
-            if (!imageUrl) {
-                // If we couldn't get the image URL from the API, use a fallback approach
-                imageUrl = `https://radar.weather.gov/ridge/RadarImg/N0R/${stationId}_N0R_0.gif`;
-            }
+            // Construct the URL for the radar image
+            // Format: https://radar.weather.gov/ridge/RadarImg/[PRODUCT]/[STATION]_[PRODUCT]_[TILT].gif
+            const imageUrl = `${baseUrl}/${productPath}/${stationId}_${productPath}_${tilt}.gif`;
+            console.log(`Fetching radar image from: ${imageUrl}`);
             
             // Store the data for later use
             this.nexradData = {
@@ -63,13 +49,14 @@ class RadarProcessor {
                 imageUrl
             };
             
-            return imageUrl;
+            // Add a cache buster to prevent browser caching
+            return `${imageUrl}?t=${Date.now()}`;
         } catch (error) {
             console.error('Error processing NEXRAD data:', error);
             // Fallback to static image if API fails
             const fallbackUrl = `https://radar.weather.gov/ridge/RadarImg/N0R/${stationId}_N0R_0.gif`;
             console.log(`Using fallback URL: ${fallbackUrl}`);
-            return fallbackUrl;
+            return `${fallbackUrl}?t=${Date.now()}`;
         } finally {
             // Hide loading indicator
             document.getElementById('loading-indicator').style.display = 'none';
