@@ -30,32 +30,69 @@ class RadarController {
         this.initializeAlerts();
     }
 
+    getStateFromCoordinates(lat, lng) {
+        // In a real application, you would use a reverse geocoding service
+        // or a GeoJSON of state boundaries to determine the state
+        
+        // For now, we'll use a simple approach based on the map center
+        // This is a placeholder - in a real app you'd use proper geocoding
+        
+        // Get the current map bounds
+        const bounds = map.getBounds();
+        const ne = bounds.getNorthEast();
+        const sw = bounds.getSouthWest();
+        
+        // Calculate the center of the visible map
+        const centerLat = (ne.lat + sw.lat) / 2;
+        const centerLng = (ne.lng + sw.lng) / 2;
+        
+        // If we're zoomed in enough, try to determine the state
+        // This is a very simplified approach
+        if (map.getZoom() > 6) {
+            // These are very rough approximations of state boundaries
+            // In a real app, you'd use proper geocoding or GeoJSON boundaries
+            if (centerLng < -100 && centerLat > 40) return 'ND,SD,MT,WY,MN';
+            if (centerLng < -100 && centerLat < 40) return 'TX,OK,NM,CO,KS';
+            if (centerLng > -100 && centerLng < -85 && centerLat > 40) return 'OH,MI,IN,IL,WI';
+            if (centerLng > -100 && centerLng < -85 && centerLat < 40) return 'AL,MS,TN,KY,GA';
+            if (centerLng > -85 && centerLat > 40) return 'NY,PA,NJ,MA,CT,RI,VT,NH,ME';
+            if (centerLng > -85 && centerLat < 40) return 'FL,SC,NC,VA,WV,MD,DE';
+        }
+        
+        return 'US'; // Default to all US alerts
+    }
+
     initializeAlerts() {
         // Get the current map bounds and fetch alerts for that area
         const bounds = map.getBounds();
         const center = bounds.getCenter();
         const state = this.getStateFromCoordinates(center.lat, center.lng);
+        
+        console.log(`Initializing alerts for region: ${state}`);
+        
         if (state) {
+            // Make alertsHandler accessible globally
+            window.alertsHandler = alertsHandler;
             alertsHandler.fetchActiveAlerts(state);
         }
         
         // Set up event listener for map movement to update alerts
         map.on('moveend', () => {
+            // Only update alerts if they're visible
+            const alertsCheckbox = document.getElementById('show-alerts');
+            if (!alertsCheckbox || !alertsCheckbox.checked) return;
+            
             const newBounds = map.getBounds();
             const newCenter = newBounds.getCenter();
             const newState = this.getStateFromCoordinates(newCenter.lat, newCenter.lng);
+            
             if (newState) {
+                console.log(`Map moved, fetching alerts for: ${newState}`);
                 alertsHandler.fetchActiveAlerts(newState);
             }
         });
     }
     
-    getStateFromCoordinates(lat, lng) {
-        // This is a simplified approach - in a real app you'd use a proper geocoding service
-        // or a GeoJSON of state boundaries to determine the state
-        return 'US'; // Default to all US alerts
-    }
-
     initializeCrosshair() {
         const mapElement = document.getElementById('map');
         mapElement.addEventListener('mousemove', (e) => {
@@ -211,6 +248,7 @@ class RadarController {
             // Clear any existing radar overlay
             if (this.radarOverlay) {
                 map.removeLayer(this.radarOverlay);
+                this.radarOverlay = null;
             }
             
             // Process the radar data
@@ -231,57 +269,73 @@ class RadarController {
             const coords = station.geometry.coordinates;
             
             // Create image overlay bounds (approximately 250km radius)
+            // Using proper calculation for radar coverage area
+            const latLonPerKm = 1 / 111; // Rough approximation: 1 degree is about 111km
+            const radarRange = 250 * latLonPerKm; // 250km radar range
+            
             const bounds = [
-                [coords[1] - 2.25, coords[0] - 2.25],
-                [coords[1] + 2.25, coords[0] + 2.25]
+                [coords[1] - radarRange, coords[0] - radarRange],
+                [coords[1] + radarRange, coords[0] + radarRange]
             ];
             
-            // Add the radar image to the map
-            this.radarOverlay = L.imageOverlay(imageUrl, bounds, {
-                opacity: 0.7,
-                interactive: true
-            }).addTo(map);
-            
-            // Zoom to the radar station
-            map.setView([coords[1], coords[0]], 8);
-            
-            // If velocity data is requested, process it
-            if (productCode === 'N0U' || productCode === 'N0V') {
-                this.radarProcessor.processVelocityData();
-            }
-            
-            // Update measurements if crosshair is active
-            this.updateMeasurements();
-            
-            // Add to animation frames if playing
-            if (this.isPlaying) {
-                this.animationFrames.push({
-                    imageUrl,
-                    timestamp: new Date()
-                });
+            // Create a new image element to ensure the image is loaded before adding to map
+            const img = new Image();
+            img.onload = () => {
+                // Add the radar image to the map
+                this.radarOverlay = L.imageOverlay(imageUrl, bounds, {
+                    opacity: 0.7,
+                    interactive: true
+                }).addTo(map);
                 
-                // Keep only the last 10 frames
-                if (this.animationFrames.length > 10) {
-                    this.animationFrames.shift();
+                // Zoom to the radar station
+                map.setView([coords[1], coords[0]], 8);
+                
+                // Update measurements if crosshair is active
+                this.updateMeasurements();
+                
+                // Add to animation frames if playing
+                if (this.isPlaying) {
+                    this.animationFrames.push({
+                        imageUrl,
+                        timestamp: new Date()
+                    });
+                    
+                    // Keep only the last 10 frames
+                    if (this.animationFrames.length > 10) {
+                        this.animationFrames.shift();
+                    }
                 }
-            }
+            };
+            
+            img.onerror = () => {
+                console.error('Failed to load radar image');
+                alert('Failed to load radar image. Please try again.');
+            };
+            
+            img.src = imageUrl;
         } catch (error) {
             console.error('Error loading radar data:', error);
+            alert(`Error loading radar data: ${error.message}`);
         } finally {
             // Hide loading indicator
             document.getElementById('loading-indicator').style.display = 'none';
         }
     }
 
+    // Fix the play/pause functionality
     play() {
         this.isPlaying = true;
+        document.getElementById('play').classList.add('active');
+        document.getElementById('pause').classList.remove('active');
         
         // Clear any existing animation interval
         if (this.animationInterval) {
             clearInterval(this.animationInterval);
         }
         
-        // Start animation loop
+        // Start animation loop with proper frame rate
+        const frameRate = this.animationFrameRate || 5 * 60 * 1000; // Default to 5 minutes if not set
+        
         this.animationInterval = setInterval(() => {
             if (this.currentStation && this.productSelector) {
                 this.loadRadarData(
@@ -290,18 +344,30 @@ class RadarController {
                     this.productSelector.currentTilt
                 );
             }
-        }, 5 * 60 * 1000); // Update every 5 minutes
+        }, frameRate);
     }
 
     pause() {
         this.isPlaying = false;
+        document.getElementById('play').classList.remove('active');
+        document.getElementById('pause').classList.add('active');
         
         if (this.animationInterval) {
             clearInterval(this.animationInterval);
             this.animationInterval = null;
         }
     }
-    
+
+    // Fix the updateRadarOpacity function to properly reference the radarOverlay
+    function updateRadarOpacity(opacity) {
+        if (window.radarController && window.radarController.radarOverlay) {
+            window.radarController.radarOverlay.setOpacity(opacity);
+        }
+        
+        // Save preference
+        localStorage.setItem('radarOpacity', opacity);
+    }
+
     showVelocityLayer() {
         if (this.currentStation && this.productSelector) {
             // Switch to velocity product
@@ -314,7 +380,7 @@ class RadarController {
         }
     }
     
-    hideVelocityLayer() {
+hideVelocityLayer() {
         if (this.currentStation && this.productSelector) {
             // Switch back to reflectivity product
             const currentProduct = this.productSelector.currentProduct;
@@ -324,7 +390,7 @@ class RadarController {
                 this.productSelector.selectProduct('N0R');
             }
         }
-    }
+    };
     
     showTemperatureLayer() {
         // Implementation for temperature layer
@@ -343,7 +409,7 @@ class RadarController {
         // Implementation for hiding temperature layer
         this.radarProcessor.clearTemperatureData();
         this.updateMeasurements();
-    }
+}
     
     changeStation(stationId) {
         this.currentStation = stationId;
@@ -658,12 +724,16 @@ function initializeWarningsPanel() {
 
 // Call these functions after the DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {
+    // Initialize UI components first
     initializeUI();
     loadUserPreferences();
     initializeWarningsPanel();
     
-    // Initialize the radar controller after UI is ready
-    if (typeof RadarController !== 'undefined') {
-        window.radarController = new RadarController();
-    }
+    // Initialize the radar controller
+    window.radarController = new RadarController();
+    
+    // Add error handling for map tiles
+    map.on('tileerror', function(error) {
+        console.error('Tile error:', error);
+    });
 });
