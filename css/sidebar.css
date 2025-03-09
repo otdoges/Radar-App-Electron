@@ -10,6 +10,7 @@
     z-index: 1000;
     transition: transform 0.3s ease;
     box-shadow: 2px 0 10px rgba(0, 0, 0, 0.3);
+    overflow-y: auto;
 }
 
 .sidebar.collapsed {
@@ -22,11 +23,33 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
+    position: sticky;
+    top: 0;
+    z-index: 1001;
 }
 
 .sidebar-header h2 {
     margin: 0;
     font-size: 18px;
+}
+
+.sidebar-toggle {
+    background: none;
+    border: none;
+    color: white;
+    font-size: 16px;
+    cursor: pointer;
+    padding: 5px;
+}
+
+/* Make sure the toggle button is always visible */
+.sidebar.collapsed .sidebar-toggle {
+    position: absolute;
+    right: -30px;
+    top: 10px;
+    background: rgba(33, 33, 33, 0.95);
+    border-radius: 0 3px 3px 0;
+    padding: 5px 8px;
 }
 
 /* Control sections */

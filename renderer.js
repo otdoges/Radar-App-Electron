@@ -217,33 +217,187 @@ class RadarController {
         });
     }
 
+    // Add this to the initializeControls method
     initializeControls() {
-        document.getElementById('play').addEventListener('click', () => this.play());
-        document.getElementById('pause').addEventListener('click', () => this.pause());
-        document.getElementById('radar-site').addEventListener('change', (e) => this.changeStation(e.target.value));
-        
-        // Layer control checkboxes
-        document.getElementById('show-alerts').addEventListener('change', (e) => {
-            const alertsPanel = document.getElementById('alerts-panel');
-            alertsPanel.style.display = e.target.checked ? 'block' : 'none';
-        });
-        
-        document.getElementById('show-velocity').addEventListener('change', (e) => {
-            if (e.target.checked) {
-                this.showVelocityLayer();
-            } else {
-                this.hideVelocityLayer();
+    console.log('Initializing radar controls');
+    
+    // Initialize product buttons
+    const productButtons = document.querySelectorAll('.product-btn');
+    productButtons.forEach(btn => {
+        btn.addEventListener('click', () => {
+            const productCode = btn.getAttribute('data-product');
+            if (productCode) {
+                // Remove active class from all buttons
+                productButtons.forEach(b => b.classList.remove('active'));
+                // Add active class to clicked button
+                btn.classList.add('active');
+                
+                if (this.currentStation) {
+                    this.loadRadarData(this.currentStation, productCode, this.currentTilt || 1);
+                }
             }
         });
-        
-        document.getElementById('show-temperature').addEventListener('change', (e) => {
-            if (e.target.checked) {
-                this.showTemperatureLayer();
-            } else {
-                this.hideTemperatureLayer();
+    });
+    
+    // Initialize tilt buttons
+    const tiltButtons = document.querySelectorAll('.tilt-btn');
+    tiltButtons.forEach(btn => {
+        btn.addEventListener('click', () => {
+            const tilt = parseInt(btn.getAttribute('data-tilt'), 10);
+            if (tilt) {
+                // Remove active class from all buttons
+                tiltButtons.forEach(b => b.classList.remove('active'));
+                // Add active class to clicked button
+                btn.classList.add('active');
+                
+                this.currentTilt = tilt;
+                if (this.currentStation) {
+                    const productCode = document.querySelector('.product-btn.active')?.getAttribute('data-product') || 'N0Q';
+                    this.loadRadarData(this.currentStation, productCode, tilt);
+                }
+            }
+        });
+    });
+    
+    // Initialize radar site selector
+    const radarSiteSelect = document.getElementById('radar-site');
+    if (radarSiteSelect) {
+        radarSiteSelect.addEventListener('change', () => {
+            const stationId = radarSiteSelect.value;
+            if (stationId) {
+                this.selectStation(stationId);
             }
         });
     }
+    
+    // Initialize settings panel toggle
+    const settingsToggle = document.getElementById('settings-toggle');
+    const settingsPanel = document.getElementById('settings-panel');
+    const closeSettings = document.querySelector('.close-settings');
+    
+    if (settingsToggle && settingsPanel) {
+        settingsToggle.addEventListener('click', () => {
+            settingsPanel.classList.toggle('active');
+        });
+        
+        if (closeSettings) {
+            closeSettings.addEventListener('click', () => {
+                settingsPanel.classList.remove('active');
+            });
+        }
+    }
+    
+    // Set default active product
+    const defaultProduct = document.querySelector('.product-btn[data-product="N0Q"]');
+    if (defaultProduct) {
+        defaultProduct.classList.add('active');
+    }
+    
+    // Set default active tilt
+    const defaultTilt = document.querySelector('.tilt-btn[data-tilt="1"]');
+    if (defaultTilt) {
+        defaultTilt.classList.add('active');
+    }
+}
+    
+    // Play/Pause buttons
+    document.querySelectorAll('.animation-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            if (btn.id === 'play') {
+                this.play();
+            } else if (btn.id === 'pause') {
+                this.pause();
+            }
+        });
+    });
+    
+    // Settings panel toggle
+    const settingsToggle = document.getElementById('settings-toggle');
+    const settingsPanel = document.getElementById('settings-panel');
+    const closeSettings = document.querySelector('.close-settings');
+    
+    if (settingsToggle && settingsPanel) {
+        settingsToggle.addEventListener('click', () => {
+            settingsPanel.classList.toggle('active');
+        });
+        
+        if (closeSettings) {
+            closeSettings.addEventListener('click', () => {
+                settingsPanel.classList.remove('active');
+            });
+        }
+    }
+    
+    // Radar opacity slider
+    const opacitySlider = document.getElementById('radar-opacity');
+    if (opacitySlider) {
+        // Set initial value from localStorage if available
+        const savedOpacity = localStorage.getItem('radarOpacity');
+        if (savedOpacity) {
+            opacitySlider.value = savedOpacity;
+        }
+        
+        opacitySlider.addEventListener('input', (e) => {
+            this.updateRadarOpacity(e.target.value);
+        });
+    }
+    
+    // Map style selector
+    const mapStyleSelector = document.getElementById('map-style');
+    if (mapStyleSelector) {
+        // Set initial value from localStorage if available
+        const savedStyle = localStorage.getItem('mapStyle');
+        if (savedStyle) {
+            mapStyleSelector.value = savedStyle;
+            this.updateMapStyle(savedStyle);
+        }
+        
+        mapStyleSelector.addEventListener('change', (e) => {
+            this.updateMapStyle(e.target.value);
+        });
+    }
+}
+
+// Add this method to update map style
+updateMapStyle(style) {
+    // Remove current base layer
+    map.eachLayer(layer => {
+        if (layer._url && layer._url.includes('tile')) {
+            map.removeLayer(layer);
+        }
+    });
+    
+    // Add new base layer based on style
+    let tileLayer;
+    switch (style) {
+        case 'satellite':
+            tileLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+                attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community',
+                maxZoom: 19
+            });
+            break;
+        case 'dark':
+            tileLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+                subdomains: 'abcd',
+                maxZoom: 19
+            });
+            break;
+        default: // default OSM style
+            tileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+                maxZoom: 19
+            });
+    }
+    
+    // Add the new layer to the map
+    if (tileLayer) {
+        tileLayer.addTo(map);
+    }
+    
+    // Save preference
+    localStorage.setItem('mapStyle', style);
+}
 
     async loadRadarData(stationId, productCode = 'N0Q', tilt = 1) {
         if (!stationId) return;
@@ -289,12 +443,21 @@ class RadarController {
             
             // Create a new image element to ensure the image is loaded before adding to map
             const img = new Image();
+            
             img.onload = () => {
+                console.log('Radar image loaded successfully');
+                
                 // Add the radar image to the map
                 this.radarOverlay = L.imageOverlay(imageUrl, bounds, {
                     opacity: 0.7,
                     interactive: true
                 }).addTo(map);
+                
+                // Get saved opacity preference
+                const savedOpacity = localStorage.getItem('radarOpacity');
+                if (savedOpacity) {
+                    this.radarOverlay.setOpacity(savedOpacity / 100);
+                }
                 
                 // Zoom to the radar station
                 map.setView([coords[1], coords[0]], 8);
@@ -316,8 +479,8 @@ class RadarController {
                 }
             };
             
-            img.onerror = () => {
-                console.error('Failed to load radar image');
+            img.onerror = (e) => {
+                console.error('Failed to load radar image', e);
                 alert('Failed to load radar image. Please try again.');
             };
             
@@ -367,10 +530,16 @@ class RadarController {
         }
     }
 
-    // Fix the updateRadarOpacity function to properly reference the radarOverlay
+    // Fix the updateRadarOpacity function - there's a duplicate implementation with code outside the function
     updateRadarOpacity(opacity) {
-        if (window.radarController && window.radarController.radarOverlay) {
-            window.radarController.radarOverlay.setOpacity(opacity);
+        // Convert opacity from 0-100 range to 0-1 range for Leaflet
+        const normalizedOpacity = opacity / 100;
+        
+        if (this.radarOverlay) {
+            this.radarOverlay.setOpacity(normalizedOpacity);
+            console.log(`Radar opacity set to: ${normalizedOpacity}`);
+        } else {
+            console.warn('No radar overlay available to update opacity');
         }
         
         // Save preference
@@ -382,9 +551,18 @@ class RadarController {
             // Switch to velocity product
             const currentProduct = this.productSelector.currentProduct;
             if (currentProduct === 'N0Q') {
-                this.productSelector.selectProduct('N0U');
+                // Use the selectProduct method if it exists, otherwise update directly
+                if (typeof this.productSelector.selectProduct === 'function') {
+                    this.productSelector.selectProduct('N0U');
+                } else {
+                    this.loadRadarData(this.currentStation, 'N0U', this.productSelector.currentTilt || 1);
+                }
             } else if (currentProduct === 'N0R') {
-                this.productSelector.selectProduct('N0V');
+                if (typeof this.productSelector.selectProduct === 'function') {
+                    this.productSelector.selectProduct('N0V');
+                } else {
+                    this.loadRadarData(this.currentStation, 'N0V', this.productSelector.currentTilt || 1);
+                }
             }
         }
     }
@@ -394,9 +572,17 @@ class RadarController {
             // Switch back to reflectivity product
             const currentProduct = this.productSelector.currentProduct;
             if (currentProduct === 'N0U') {
-                this.productSelector.selectProduct('N0Q');
+                if (typeof this.productSelector.selectProduct === 'function') {
+                    this.productSelector.selectProduct('N0Q');
+                } else {
+                    this.loadRadarData(this.currentStation, 'N0Q', this.productSelector.currentTilt || 1);
+                }
             } else if (currentProduct === 'N0V') {
-                this.productSelector.selectProduct('N0R');
+                if (typeof this.productSelector.selectProduct === 'function') {
+                    this.productSelector.selectProduct('N0R');
+                } else {
+                    this.loadRadarData(this.currentStation, 'N0R', this.productSelector.currentTilt || 1);
+                }
             }
         }
     }
@@ -410,6 +596,9 @@ class RadarController {
                     if (success) {
                         this.updateMeasurements();
                     }
+                })
+                .catch(error => {
+                    console.error('Error loading temperature data:', error);
                 });
         }
     }
@@ -438,7 +627,70 @@ document.addEventListener('DOMContentLoaded', () => {
     console.log('DOM fully loaded');
     
     // Initialize UI components first
-    initializeUI();
+    function initializeUI() {
+        console.log('Initializing UI components');
+        
+        // Section toggles for collapsible sections
+        const sectionToggles = document.querySelectorAll('.section-toggle');
+        sectionToggles.forEach(toggle => {
+            toggle.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                const section = toggle.closest('.control-section');
+                const content = section.querySelector('.section-content');
+                
+                // Toggle section content visibility
+                if (content) {
+                    content.classList.toggle('active');
+                    
+                    // Update toggle icon
+                    const icon = toggle.querySelector('i');
+                    if (icon) {
+                        if (content.classList.contains('active')) {
+                            icon.className = 'fas fa-chevron-up';
+                        } else {
+                            icon.className = 'fas fa-chevron-down';
+                        }
+                    }
+                }
+            });
+        });
+        
+        // Initialize sidebar toggle
+        const sidebarToggle = document.getElementById('sidebar-toggle');
+        const sidebar = document.getElementById('sidebar');
+        
+        if (sidebarToggle && sidebar) {
+            console.log('Setting up sidebar toggle');
+            sidebarToggle.addEventListener('click', () => {
+                console.log('Sidebar toggle clicked');
+                sidebar.classList.toggle('collapsed');
+                
+                // Update toggle icon
+                const icon = sidebarToggle.querySelector('i');
+                if (icon) {
+                    if (sidebar.classList.contains('collapsed')) {
+                        icon.className = 'fas fa-chevron-right';
+                    } else {
+                        icon.className = 'fas fa-chevron-left';
+                    }
+                }
+            });
+        }
+        
+        // Open first section by default
+        const firstSection = document.querySelector('.control-section');
+        if (firstSection) {
+            const content = firstSection.querySelector('.section-content');
+            const toggle = firstSection.querySelector('.section-toggle i');
+            if (content) {
+                content.classList.add('active');
+            }
+            if (toggle) {
+                toggle.className = 'fas fa-chevron-up';
+            }
+        }
+    }
     
     // Initialize the radar controller and make it globally accessible
     window.radarController = new RadarController();
