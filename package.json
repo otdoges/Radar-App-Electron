@@ -1,33 +1,70 @@
 {
   "name": "radar-app-electron",
   "version": "1.0.0",
-  "description": "Advanced Weather Radar Application",
+  "description": "An Electron-based desktop application for visualizing NEXRAD weather radar data",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
-    "build": "electron-builder",
-    "dev": "electron ."
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "pack": "electron-builder --dir",
+    "dist": "electron-builder --publish never",
+    "build:win": "electron-builder --win --publish never",
+    "build:mac": "electron-builder --mac --publish never",
+    "build:linux": "electron-builder --linux --publish never"
   },
-  "keywords": [],
+  "keywords": ["radar", "weather", "nexrad", "electron"],
   "author": "",
   "license": "ISC",
   "packageManager": "pnpm@10.6.0",
   "dependencies": {
     "@turf/turf": "^7.2.0",
     "axios": "^1.8.2",
-    "d3": "^7.8.5",
-    "electron": "^35.0.0",
-    "electron-builder": "^25.1.8",
     "leaflet": "^1.9.4",
     "moment": "^2.30.1",
     "nexrad-level-2-data": "^2.4.2",
-    "socket.io-client": "^4.7.4",
-    "three.js": "^0.77.1",
-    "ws": "^8.16.0"
+    "three.js": "^0.77.1"
   },
-  "pnpm": {
-    "onlyBuiltDependencies": [
-      "electron"
-    ]
+  "devDependencies": {
+    "electron": "^35.0.0",
+    "electron-builder": "^25.1.8"
+  },
+  "build": {
+    "appId": "com.radar-app.electron",
+    "productName": "Radar App",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "**/*",
+      "!**/node_modules/*/{CHANGELOG.md,README.md,README,readme.md,readme}",
+      "!**/node_modules/*/{test,__tests__,tests,powered-test,example,examples}",
+      "!**/node_modules/*.d.ts",
+      "!**/node_modules/.bin",
+      "!**/.{idea,git,github,vscode}",
+      "!**/{.DS_Store,*.log,*.md}"
+    ],
+    "win": {
+      "target": ["nsis", "portable"],
+      "icon": "assets/icon.ico",
+      "artifactName": "${productName}-${version}-${arch}.${ext}",
+      "signingHashAlgorithms": ["sha256"]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true
+    },
+    "mac": {
+      "target": ["dmg"],
+      "icon": "assets/icon.icns"
+    },
+    "linux": {
+      "target": ["AppImage", "deb"],
+      "icon": "assets/icon.png",
+      "category": "Utility"
+    },
+    "asar": true,
+    "compression": "maximum",
+    "npmRebuild": false
   }
 }

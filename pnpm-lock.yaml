@@ -14,12 +14,6 @@ importers:
       axios:
         specifier: ^1.8.2
         version: 1.8.2
-      electron:
-        specifier: ^35.0.0
-        version: 35.0.0
-      electron-builder:
-        specifier: ^25.1.8
-        version: 25.1.8(electron-builder-squirrel-windows@25.1.8)
       leaflet:
         specifier: ^1.9.4
         version: 1.9.4
@@ -32,6 +26,13 @@ importers:
       three.js:
         specifier: ^0.77.1
         version: 0.77.1
+    devDependencies:
+      electron:
+        specifier: ^35.0.0
+        version: 35.0.0
+      electron-builder:
+        specifier: ^25.1.8
+        version: 25.1.8(electron-builder-squirrel-windows@25.1.8)
 
 packages:
 
