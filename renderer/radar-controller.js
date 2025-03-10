@@ -178,13 +178,22 @@ class RadarController {
     }
     
     // Load radar data for a station
-    async loadRadarData(stationId, productCode = 'N0Q', tilt = 1) {
+    // Update the loadRadarData method to support Level 2
+    async loadRadarData(stationId, productCode, level) {
         if (!stationId) return;
         
         this.currentStation = stationId;
         
+        // Use the default level if not specified
+        const radarLevel = level || this.defaultLevel || 3;
+        
+        // For Level 2, use different default product codes
+        if (!productCode) {
+            productCode = radarLevel === 2 ? 'Reflectivity' : 'N0Q';
+        }
+        
         // Use the radar data handler to load the data
-        window.radarDataHandler.loadRadarData(stationId, productCode);
+        window.radarDataHandler.loadRadarData(stationId, productCode, radarLevel);
     }
     
     // Initialize UI controls
