@@ -150,155 +150,150 @@ class ThreddsConnector {
     }
 
     /**
-     * Add a WMS layer to the map
-     * @param {Object} map - Leaflet map instance
-     * @param {string} wmsUrl - WMS service URL
-     * @param {string} layer - Layer name
-     * @param {Object} options - WMS layer options
+     * THREDDS Connector
+     * Handles connections to the THREDDS Data Server for radar data
      */
-    addWmsLayer(map, wmsUrl, layer, options = {}) {
-        const defaultOptions = {
-            format: 'image/png',
-            transparent: true,
-            opacity: 0.7,
-            attribution: 'UCAR THREDDS Data Server'
-        };
-        
-        const wmsOptions = { ...defaultOptions, ...options, layers: layer };
-        const wmsLayer = L.tileLayer.wms(wmsUrl, wmsOptions);
-        
-        wmsLayer.addTo(map);
-        return wmsLayer;
-    }
-
-    /**
-     * Format date as YYYY/MM/DD for THREDDS URL paths
-     * @param {Date} date - Date object
-     * @returns {string} Formatted date string
-     */
-    formatDate(date) {
-        const year = date.getFullYear();
-        const month = String(date.getMonth() + 1).padStart(2, '0');
-        const day = String(date.getDate()).padStart(2, '0');
-        return `${year}/${month}/${day}`;
-    }
-
-    /**
-     * Extract timestamp from NEXRAD filename
-     * @param {string} filename - NEXRAD filename
-     * @returns {Date} Timestamp
-     */
-    extractTimestampFromFilename(filename) {
-        // Example filename: KICT20230615_235055_V06.ar2v
-        const match = filename.match(/(\w{4})(\d{8})_(\d{6})_/);
-        if (!match) return null;
-        
-        const [, station, dateStr, timeStr] = match;
-        const year = dateStr.substring(0, 4);
-        const month = dateStr.substring(4, 6);
-        const day = dateStr.substring(6, 8);
-        const hour = timeStr.substring(0, 2);
-        const minute = timeStr.substring(2, 4);
-        const second = timeStr.substring(4, 6);
-        
-        return new Date(`${year}-${month}-${day}T${hour}:${minute}:${second}Z`);
-    }
-
-    /**
-     * Get available forecast models from the IDD catalog
-     * @returns {Promise<Array>} List of available forecast model categories
-     */
-    async getForecastModelCategories() {
-        try {
-            if (this.datasetCache.has('forecastModelCategories')) {
-                return this.datasetCache.get('forecastModelCategories');
-            }
-            
-            const url = this.forecastModelsCatalog;
-            console.log(`Fetching forecast model categories from: ${url}`);
-            
-            const response = await fetch(url);
-            const text = await response.text();
-            
-            // Parse XML response
-            const parser = new DOMParser();
-            const xmlDoc = parser.parseFromString(text, "text/xml");
-            
-            // Extract catalog references (model categories)
-            const catalogRefs = Array.from(xmlDoc.getElementsByTagName('catalogRef'))
-                .map(ref => {
-                    const name = ref.getAttribute('xlink:title') || ref.getAttribute('title');
-                    const href = ref.getAttribute('xlink:href') || ref.getAttribute('href');
-                    return {
-                        name,
-                        href,
-                        url: `${this.catalogUrl}/idd/${href}`
-                    };
-                });
-            
-            this.datasetCache.set('forecastModelCategories', catalogRefs);
-            return catalogRefs;
-        } catch (error) {
-            console.error('Error fetching forecast model categories:', error);
-            return [];
+    class ThreddsConnector {
+        constructor() {
+            this.baseUrl = 'https://thredds.ucar.edu/thredds';
+            this.wmsLayers = new Map();
         }
-    }
-
-    /**
-     * Get available models within a specific category
-     * @param {string} categoryHref - Category href from getForecastModelCategories
-     * @returns {Promise<Array>} List of available models in the category
-     */
-    async getModelsInCategory(categoryHref) {
-        try {
-            const cacheKey = `models_${categoryHref}`;
-            if (this.datasetCache.has(cacheKey)) {
-                return this.datasetCache.get(cacheKey);
+    
+        /**
+         * Add a WMS layer to the map
+         * @param {Object} map - Leaflet map object
+         * @param {string} wmsUrl - WMS service URL
+         * @param {string} layerName - Layer name
+         * @param {Object} options - WMS layer options
+         * @returns {Object} The WMS layer
+         */
+        addWmsLayer(map, wmsUrl, layerName, options = {}) {
+            try {
+                // Default options
+                const defaultOptions = {
+                    layers: layerName,
+                    format: 'image/png',
+                    transparent: true,
+                    opacity: 0.7,
+                    version: '1.3.0',
+                    crs: L.CRS.EPSG4326,
+                    attribution: 'NOAA/NWS NEXRAD Data via THREDDS'
+                };
+                
+                // Merge default options with provided options
+                const mergedOptions = { ...defaultOptions, ...options };
+                
+                // Create the WMS layer
+                const wmsLayer = L.tileLayer.wms(wmsUrl, mergedOptions);
+                
+                // Add the layer to the map
+                wmsLayer.addTo(map);
+                
+                // Generate a unique ID for the layer
+                const layerId = `wms-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+                
+                // Store the layer
+                this.wmsLayers.set(layerId, wmsLayer);
+                
+                return wmsLayer;
+            } catch (error) {
+                console.error('Error adding WMS layer:', error);
+                return null;
             }
-            
-            const url = `${this.catalogUrl}/idd/${categoryHref}`;
-            console.log(`Fetching models from category: ${url}`);
-            
-            const response = await fetch(url);
-            const text = await response.text();
-            
-            // Parse XML response
-            const parser = new DOMParser();
-            const xmlDoc = parser.parseFromString(text, "text/xml");
-            
-            // Extract datasets and catalog references
-            const datasets = [
-                ...Array.from(xmlDoc.getElementsByTagName('dataset'))
-                    .filter(dataset => dataset.hasAttribute('urlPath'))
-                    .map(dataset => {
-                        const name = dataset.getAttribute('name');
-                        const urlPath = dataset.getAttribute('urlPath');
-                        return {
-                            name,
-                            type: 'dataset',
-                            urlPath,
-                            wmsUrl: `${this.wmsUrl}/${urlPath}`,
-                            ncssUrl: `${this.ncssUrl}/${urlPath}`
-                        };
-                    }),
-                ...Array.from(xmlDoc.getElementsByTagName('catalogRef'))
-                    .map(ref => {
-                        const name = ref.getAttribute('xlink:title') || ref.getAttribute('title');
-                        const href = ref.getAttribute('xlink:href') || ref.getAttribute('href');
-                        return {
-                            name,
-                            type: 'catalog',
-                            href,
-                            url: `${this.catalogUrl}/idd/${categoryHref.split('/')[0]}/${href}`
-                        };
-                    })
-            ];
-            
-            this.datasetCache.set(cacheKey, datasets);
-            return datasets;
-        } catch (error) {
-            console.error(`Error fetching models in category ${categoryHref}:`, error);
-            return [];
+        }
+    
+        /**
+         * Create a WMS layer without adding it to the map
+         * @param {string} wmsUrl - WMS service URL
+         * @param {string} layerName - Layer name
+         * @param {Object} options - WMS layer options
+         * @returns {Object} The WMS layer
+         */
+        createWmsLayer(wmsUrl, layerName, options = {}) {
+            try {
+                // Default options
+                const defaultOptions = {
+                    layers: layerName,
+                    format: 'image/png',
+                    transparent: true,
+                    opacity: 0.7,
+                    version: '1.3.0',
+                    crs: L.CRS.EPSG4326,
+                    attribution: 'NOAA/NWS NEXRAD Data via THREDDS'
+                };
+                
+                // Merge default options with provided options
+                const mergedOptions = { ...defaultOptions, ...options };
+                
+                // Create the WMS layer
+                return L.tileLayer.wms(wmsUrl, mergedOptions);
+            } catch (error) {
+                console.error('Error creating WMS layer:', error);
+                return null;
+            }
+        }
+    
+        /**
+         * Remove a WMS layer from the map
+         * @param {Object} map - Leaflet map object
+         * @param {string} layerId - Layer ID
+         */
+        removeWmsLayer(map, layerId) {
+            if (this.wmsLayers.has(layerId)) {
+                const layer = this.wmsLayers.get(layerId);
+                map.removeLayer(layer);
+                this.wmsLayers.delete(layerId);
+            }
+        }
+    
+        /**
+         * Remove all WMS layers from the map
+         * @param {Object} map - Leaflet map object
+         */
+        removeAllWmsLayers(map) {
+            for (const layer of this.wmsLayers.values()) {
+                map.removeLayer(layer);
+            }
+            this.wmsLayers.clear();
+        }
+    
+        /**
+         * Get WMS capabilities
+         * @param {string} wmsUrl - WMS service URL
+         * @returns {Promise<Object>} WMS capabilities
+         */
+        async getWmsCapabilities(wmsUrl) {
+            try {
+                const capabilitiesUrl = `${wmsUrl}?service=WMS&version=1.3.0&request=GetCapabilities`;
+                const response = await fetch(capabilitiesUrl);
+                const text = await response.text();
+                
+                // Parse XML
+                const parser = new DOMParser();
+                const xml = parser.parseFromString(text, 'text/xml');
+                
+                return this.parseWmsCapabilities(xml);
+            } catch (error) {
+                console.error('Error getting WMS capabilities:', error);
+                return null;
+            }
+        }
+    
+        /**
+         * Parse WMS capabilities XML
+         * @param {Object} xml - XML document
+         * @returns {Object} Parsed capabilities
+         */
+        parseWmsCapabilities(xml) {
+            try {
+                const capabilities = {
+                    version: xml.querySelector('WMS_Capabilities')?.getAttribute('version'),
+                    service: {
+                        name: xml.querySelector('Service > Name')?.textContent,
+    
+                    }
+                };
+            };
         }
     }
 
