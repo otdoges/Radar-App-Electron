@@ -1,3 +1,9 @@
+import map from './map-setup';
+import RadarController from './radar-controller';
+
+// Initialize the RadarController
+const radarController = new RadarController();
+
 const map = L.map('map', {
     center: [39.8283, -98.5795],
     zoom: 4,

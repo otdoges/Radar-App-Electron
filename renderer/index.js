@@ -18,13 +18,15 @@ window.threddsConnector = threddsConnector;
 const mapController = new MapController('map');
 const map = mapController.getMap();
 
-// Initialize the radar data handler
+// Initialize the radar data handler with Level 2 as default
 const radarDataHandler = new RadarDataHandler(mapController, threddsConnector);
+radarDataHandler.defaultLevel = 2; // Set default radar level to 2
 radarDataHandler.initialize();
 window.radarDataHandler = radarDataHandler;
 
-// Initialize the radar controller
+// Initialize the radar controller with Level 2 as default
 const radarController = new RadarController(mapController, threddsConnector);
+radarController.defaultLevel = 2; // Set default radar level to 2
 window.radarController = radarController;
 
 // Initialize the alerts handler
@@ -103,10 +105,95 @@ document.addEventListener('DOMContentLoaded', () => {
             const selectedProduct = productSelect.value;
             const selectedStation = stationSelect.value;
             if (selectedProduct && selectedStation) {
-                radarDataHandler.loadRadarData(selectedStation, selectedProduct);
+                // For Level 2, we use different product names
+                radarDataHandler.loadRadarData(selectedStation, selectedProduct, 2);
             }
         });
     }
+    
+    // Set up radar level toggle
+    const level2Toggle = document.getElementById('level2-toggle');
+    const level3Toggle = document.getElementById('level3-toggle');
+    
+    if (level2Toggle) {
+        level2Toggle.addEventListener('change', () => {
+            if (level2Toggle.checked) {
+                radarController.defaultLevel = 2;
+                radarDataHandler.defaultLevel = 2;
+                
+                // Reload current station with Level 2 data
+                const selectedStation = stationSelect.value;
+                if (selectedStation) {
+                    radarController.loadRadarData(selectedStation, 'Reflectivity', 2);
+                }
+                
+                // Update product select options for Level 2
+                updateProductOptions(2);
+            }
+        });
+    }
+    
+    if (level3Toggle) {
+        level3Toggle.addEventListener('change', () => {
+            if (level3Toggle.checked) {
+                radarController.defaultLevel = 3;
+                radarDataHandler.defaultLevel = 3;
+                
+                // Reload current station with Level 3 data
+                const selectedStation = stationSelect.value;
+                if (selectedStation) {
+                    radarController.loadRadarData(selectedStation, 'N0Q', 3);
+                }
+                
+                // Update product select options for Level 3
+                updateProductOptions(3);
+            }
+        });
+    }
+    
+    // Function to update product options based on radar level
+    function updateProductOptions(level) {
+        if (!productSelect) return;
+        
+        // Clear existing options
+        productSelect.innerHTML = '';
+        
+        if (level === 2) {
+            // Level 2 products
+            const level2Products = [
+                { code: 'Reflectivity', name: 'Reflectivity' },
+                { code: 'RadialVelocity', name: 'Radial Velocity' },
+                { code: 'SpectrumWidth', name: 'Spectrum Width' }
+            ];
+            
+            level2Products.forEach(product => {
+                const option = document.createElement('option');
+                option.value = product.code;
+                option.textContent = product.name;
+                productSelect.appendChild(option);
+            });
+        } else {
+            // Level 3 products
+            const level3Products = [
+                { code: 'N0Q', name: 'Base Reflectivity (0.5°)' },
+                { code: 'N1Q', name: 'Base Reflectivity (1.5°)' },
+                { code: 'N0U', name: 'Base Velocity (0.5°)' },
+                { code: 'N1U', name: 'Base Velocity (1.5°)' },
+                { code: 'NCR', name: 'Composite Reflectivity' },
+                { code: 'NTP', name: 'Storm Total Precipitation' }
+            ];
+            
+            level3Products.forEach(product => {
+                const option = document.createElement('option');
+                option.value = product.code;
+                option.textContent = product.name;
+                productSelect.appendChild(option);
+            });
+        }
+    }
+    
+    // Initialize product options based on default level
+    updateProductOptions(radarController.defaultLevel);
     
     // Set up refresh button
     const refreshBtn = document.getElementById('refresh-btn');
@@ -115,7 +202,11 @@ document.addEventListener('DOMContentLoaded', () => {
             const selectedStation = stationSelect.value;
             const selectedProduct = productSelect.value;
             if (selectedStation) {
-                radarDataHandler.loadRadarData(selectedStation, selectedProduct || 'N0Q');
+                radarDataHandler.loadRadarData(
+                    selectedStation, 
+                    selectedProduct || (radarDataHandler.defaultLevel === 2 ? 'Reflectivity' : 'N0Q'),
+                    radarDataHandler.defaultLevel
+                );
             }
         });
     }
@@ -143,5 +234,3 @@ document.addEventListener('DOMContentLoaded', () => {
     
     console.log('UI event listeners initialized');
 });
-
-// Create the map-controller.js file
