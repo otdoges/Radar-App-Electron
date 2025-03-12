@@ -103,7 +103,7 @@ npm run build
 This will create distributable packages in the dist_electron directory.
 
 ## License
-ISC License
+MIT License
 
 ## Acknowledgments
 - NOAA/NWS for providing NEXRAD radar data
